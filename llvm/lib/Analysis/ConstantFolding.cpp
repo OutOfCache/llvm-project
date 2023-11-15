@@ -1534,6 +1534,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_umax:
   case Intrinsic::amdgcn_s_quadmask:
+  case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
@@ -2434,6 +2435,20 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         QuadMask |= (1 << i);
       }
       return ConstantInt::get(Ty, QuadMask);
+    }
+
+    case Intrinsic::amdgcn_s_wqm: {
+      uint64_t Val = Op->getZExtValue();
+      uint64_t WQM = 0;
+      uint64_t Quad = 0xF;
+      for (unsigned i = 0; i < Op->getBitWidth() / 4;
+           ++i, Val >>= 4, Quad <<= 4) {
+        if (!(Val & 0xF))
+          continue;
+
+        WQM |= Quad;
+      }
+      return ConstantInt::get(Ty, WQM);
     }
 
     default:
